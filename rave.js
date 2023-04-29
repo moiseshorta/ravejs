@@ -128,15 +128,15 @@ const transfer = async () => {
 
 const bufferToTensor = (buffer) => {
   let b = buffer.getChannelData(0);
-  let cropped_data = [];
-  let cropped_length = Math.min(10 * audioCtx.sampleRate, b.length);
-  for (let i = 0; i < cropped_length; i++) {
-    cropped_data.push(b[i]);
+  let buffer_data = [];
+  let buffer_length = b.length;
+  for (let i = 0; i < buffer_length; i++) {
+    buffer_data.push(b[i]);
   }
-  const inputTensor = new ort.Tensor("float32", cropped_data, [
+  const inputTensor = new ort.Tensor("float32", buffer_data, [
     1,
     1,
-    cropped_length,
+    buffer_length,
   ]);
   return inputTensor;
 };
