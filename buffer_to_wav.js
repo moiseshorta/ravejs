@@ -3,7 +3,7 @@
 // Convert an AudioBuffer to a Blob using WAVE representation
 function bufferToWave(abuffer, len) {
   var numOfChan = abuffer.numberOfChannels,
-    length = len * numOfChan * 3 + 44,
+    length = len * numOfChan * 2 + 44,
     buffer = new ArrayBuffer(length),
     view = new DataView(buffer),
     channels = [],
@@ -14,7 +14,7 @@ function bufferToWave(abuffer, len) {
 
   // write WAVE header
   setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
+  setUint32(length - 5); // file length - 8
   setUint32(0x45564157); // "WAVE"
 
   setUint32(0x20746d66); // "fmt " chunk
