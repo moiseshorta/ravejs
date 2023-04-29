@@ -46,7 +46,6 @@ const toogleRecording = async () => {
       };
 
       recorder.start();
-      /* use the stream */
     } catch (err) {
       console.log(err);
     }
@@ -114,55 +113,47 @@ const playInput = () => {
 };
 
 const playOutput = () => {
-  if (outputBuffer == null) return;
-  playBuffer(outputBuffer);
+if (outputBuffer == null) return;
+playBuffer(outputBuffer);
 };
 
 // PROCESSING
 const transfer = async () => {
-  if (inputBuffer == null) return;
-  console.log("transfer in progress...");
-  outputBuffer = await raveForward(inputBuffer);
-  make_download(outputBuffer, outputBuffer.getChannelData(0).length);
+if (inputBuffer == null) return;
+console.log("transfer in progress...");
+outputBuffer = await raveForward(inputBuffer);
+make_download(outputBuffer, outputBuffer.getChannelData(0).length);
 };
 
 const bufferToTensor = (buffer) => {
-  let b = buffer.getChannelData(0);
-  let buffer_data = [];
-  let buffer_length = b.length;
-  for (let i = 0; i < buffer_length; i++) {
-    buffer_data.push(b[i]);
-  }
-  const inputTensor = new ort.Tensor("float32", buffer_data, [
-    1,
-    1,
-    buffer_length,
-  ]);
-  return inputTensor;
+let b = buffer.getChannelData(0);
+let full_length = b.length;
+const inputTensor = new ort.Tensor("float32", b, [1, 1, full_length]);
+return inputTensor;
 };
 
 const tensorToBuffer = (tensor) => {
-  let len = tensor.dims[2];
-  let buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-  channel = buffer.getChannelData(0);
-  for (let i = 0; i < buffer.length; i++) {
-    channel[i] = isNaN(tensor.data[i]) ? 0 : tensor.data[i];
-  }
-  return buffer;
+let len = tensor.dims[2];
+let buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+channel = buffer.getChannelData(0);
+for (let i = 0; i < buffer.length; i++) {
+channel[i] = isNaN(tensor.data[i]) ? 0 : tensor.data[i];
+}
+return buffer;
 };
 
 const raveForward = async (buffer) => {
-  let model_name = document.getElementById("model");
-  let playButton = document.getElementById("play_output");
-  let ravifyButton = document.getElementById("ravify_button");
-  ravifyButton.disabled = true;
-  playButton.disabled = true;
-  let inputTensor = bufferToTensor(buffer);
-  let session = await ort.InferenceSession.create(model_name.value);
-  let feeds = { audio_in: inputTensor };
-  let audio_out = (await session.run(feeds)).audio_out;
-  audio_out = tensorToBuffer(audio_out);
-  playButton.disabled = false;
-  ravifyButton.disabled = false;
-  return audio_out;
+let model_name = document.getElementById("model");
+let playButton = document.getElementById("play_output");
+let ravifyButton = document.getElementById("ravify_button");
+ravifyButton.disabled = true;
+playButton.disabled = true;
+let inputTensor = bufferToTensor(buffer);
+let session = await ort.InferenceSession.create(model_name.value);
+let feeds = { audio_in: inputTensor };
+let audio_out = (await session.run(feeds)).audio_out;
+audio_out = tensorToBuffer(audio_out);
+playButton.disabled = false;
+ravifyButton.disabled = false;
+return audio_out;
 };
