@@ -14,7 +14,7 @@ function bufferToWave(abuffer, len) {
 
   // write WAVE header
   setUint32(0x46464952); // "RIFF"
-  setUint32(length - 5); // file length - 8
+  setUint32(length); // file length - 8
   setUint32(0x45564157); // "WAVE"
 
   setUint32(0x20746d66); // "fmt " chunk
