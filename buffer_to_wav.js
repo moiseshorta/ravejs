@@ -1,9 +1,8 @@
-// ADAPTED FROM https://www.russellgood.com/how-to-convert-audiobuffer-to-audio-file/
-
 // Convert an AudioBuffer to a Blob using WAVE representation
-function bufferToWave(abuffer, len) {
+function bufferToWave(abuffer) {
   var numOfChan = abuffer.numberOfChannels,
-    length = len * numOfChan * 2 + 44,
+    total_samples = abuffer.length,
+    length = total_samples * numOfChan * 2 + 44,
     buffer = new ArrayBuffer(length),
     view = new DataView(buffer),
     channels = [],
@@ -14,7 +13,7 @@ function bufferToWave(abuffer, len) {
 
   // write WAVE header
   setUint32(0x46464952); // "RIFF"
-  setUint32(length); // file length - 8
+  setUint32(length - 8); // file length - 8
   setUint32(0x45564157); // "WAVE"
 
   setUint32(0x20746d66); // "fmt " chunk
@@ -58,8 +57,8 @@ function bufferToWave(abuffer, len) {
   }
 }
 
-function make_download(abuffer, total_samples) {
-  var new_file = URL.createObjectURL(bufferToWave(abuffer, total_samples));
+function make_download(abuffer) {
+  var new_file = URL.createObjectURL(bufferToWave(abuffer));
 
   var download_link = document.getElementById("download_link");
   download_link.href = new_file;
