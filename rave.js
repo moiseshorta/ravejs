@@ -5,7 +5,6 @@ let isRecording = false;
 let stream = null;
 let recorder = null;
 let chunks = [];
-let model = null;
 
 // ENABLING AUDIO CONTEXT
 const enableAudioCtx = () => {
@@ -81,7 +80,6 @@ const loadUploadedFile = () => {
 };
 
 const loadCantina = async () => {
-  let select = document.getElementById("model");
   let playButton = document.getElementById("play_input");
   let ravifyButton = document.getElementById("ravify_button");
   playButton.disabled = true;
@@ -91,21 +89,6 @@ const loadCantina = async () => {
   inputBuffer = buffer;
   playButton.disabled = false;
   ravifyButton.disabled = false;
-
-  var fileInput = document.getElementById('onnx-model');
-  if (fileInput.files[0] != null) {
-    var reader = new FileReader();
-    reader.onload = function() {
-      var buffer = reader.result;
-      var option = document.createElement('option');
-      option.value = 'onnx_model';
-      option.text = 'Uploaded Model';
-      model = new rave.Model(new rave.Buffer(buffer), {type: 'onnx'});
-      select.add(option);
-      document.getElementById('status').innerHTML = 'Model loaded successfully!';
-    };
-    reader.readAsArrayBuffer(fileInput.files[0]);
-  }
 };
 
 const urlToBuffer = async (url) => {
@@ -138,10 +121,6 @@ const playOutput = () => {
 // PROCESSING
 const transfer = async () => {
   if (inputBuffer == null) return;
-  if (model == null) {
-    document.getElementById('status').innerHTML = 'Please select a model';
-    return;
-  }
   console.log("transfer in progress...");
   outputBuffer = await raveForward(inputBuffer);
   make_download(outputBuffer, outputBuffer.getChannelData(0).length);
@@ -179,18 +158,11 @@ const raveForward = async (buffer) => {
   ravifyButton.disabled = true;
   playButton.disabled = true;
   let inputTensor = bufferToTensor(buffer);
-  let result;
-  if (model_name.value == "onnx_model") {
-    result = await model.forward([inputTensor]);
-  } else {
-    let session = await ort.InferenceSession.create(model_name.value);
-    let feeds = { audio_in: inputTensor };
-    let output = await session.run(feeds);
-    result = output.audio_out;
-  }
-  outputBuffer = tensorToBuffer(result);
+  let session = await ort.InferenceSession.create(model_name.value);
+  let feeds = { audio_in: inputTensor };
+  let audio_out = (await session.run(feeds)).audio_out;
+  audio_out = tensorToBuffer(audio_out);
   playButton.disabled = false;
   ravifyButton.disabled = false;
-  return outputBuffer;
+  return audio_out;
 };
-
