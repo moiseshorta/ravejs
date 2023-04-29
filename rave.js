@@ -98,6 +98,14 @@ const urlToBuffer = async (url) => {
     .then((ArrayBuffer) => audioCtx.decodeAudioData(ArrayBuffer));
   return audioBuffer;
 };
+var file = document.getElementById('onnx-model').files[0];
+var reader = new FileReader();
+reader.onload = function() {
+    var buffer = reader.result;
+    model = new rave.Model(new rave.Buffer(buffer), {type: 'onnx'});
+    document.getElementById('status').innerHTML = 'Model loaded successfully!';
+};
+reader.readAsArrayBuffer(file);
 
 // PLAY BUFFER
 const playBuffer = (buffer) => {
