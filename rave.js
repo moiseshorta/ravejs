@@ -229,14 +229,18 @@ const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
   const output = audioCtx.createBufferSource();
   output.buffer = outputBuffer;
 
-  lowpassFilter.connect(outputBuffer, 0, 0);
+  lowpassFilter.connect(audioCtx.destination);
+  source.start(0);
 
   return new Promise((resolve) => {
-    source.start();
-    output.start();
-    source.onended = () => resolve(outputBuffer);
+    audioCtx.suspend();
+    audioCtx.startRendering().then((renderedBuffer) => {
+      audioCtx.resume();
+      resolve(renderedBuffer);
+    });
   });
 };
+
 
 const processAudio = async () => {
   if (inputBuffer === null) return;
