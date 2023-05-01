@@ -211,44 +211,36 @@ const noiseToTensor = (buffer, noiseLevel = 0.005) => {
 };
 
 const applyFilters = async (buffer, highpass, lowpass) => {
+  const offlineCtx = new OfflineAudioContext(
+    buffer.numberOfChannels,
+    buffer.length,
+    buffer.sampleRate
+  );
+
   // Create a new AudioBufferSourceNode for the input buffer
-  const source = audioCtx.createBufferSource();
+  const source = offlineCtx.createBufferSource();
   source.buffer = buffer;
 
   // Create a highpass filter
-  const highpassFilter = audioCtx.createBiquadFilter();
+  const highpassFilter = offlineCtx.createBiquadFilter();
   highpassFilter.type = "highpass";
   highpassFilter.frequency.value = highpass;
 
   // Create a lowpass filter
-  const lowpassFilter = audioCtx.createBiquadFilter();
+  const lowpassFilter = offlineCtx.createBiquadFilter();
   lowpassFilter.type = "lowpass";
   lowpassFilter.frequency.value = lowpass;
 
-  // Create a processor node to capture the output of the filter chain
-  const processor = audioCtx.createScriptProcessor(buffer.length, buffer.numberOfChannels, buffer.numberOfChannels);
-  const outputPromise = new Promise(resolve => {
-    processor.onaudioprocess = function(e) {
-      // Get the output buffer
-      const outputBuffer = e.outputBuffer;
-      // Disconnect processor to allow garbage collection
-      processor.disconnect();
-      // Resolve the promise with the output buffer
-      resolve(outputBuffer);
-    };
-  });
-
-  // Connect the nodes: source -> highpassFilter -> lowpassFilter -> processor
+  // Connect the nodes: source -> highpassFilter -> lowpassFilter -> offlineCtx.destination
   source.connect(highpassFilter);
   highpassFilter.connect(lowpassFilter);
-  lowpassFilter.connect(processor);
-  processor.connect(audioCtx.destination);
+  lowpassFilter.connect(offlineCtx.destination);
 
   // Start the source node
   source.start();
 
-  // Wait for the output buffer and return it
-  const outputBuffer = await outputPromise;
+  // Render the offline context and return the resulting buffer
+  const outputBuffer = await offlineCtx.startRendering();
   return outputBuffer;
 };
 
