@@ -225,17 +225,12 @@ const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
   source.connect(highpassFilter);
   highpassFilter.connect(lowpassFilter);
 
-  const outputBuffer = audioCtx.createBuffer(1, buffer.length, buffer.sampleRate);
-  const output = audioCtx.createBufferSource();
-  output.buffer = outputBuffer;
-
-  lowpassFilter.connect(audioCtx.destination);
-  source.start(0);
+  const offlineCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  lowpassFilter.connect(offlineCtx.destination);
 
   return new Promise((resolve) => {
-    audioCtx.suspend();
-    audioCtx.startRendering().then((renderedBuffer) => {
-      audioCtx.resume();
+    source.start(0);
+    offlineCtx.startRendering().then((renderedBuffer) => {
       resolve(renderedBuffer);
     });
   });
