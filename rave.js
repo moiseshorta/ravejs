@@ -211,21 +211,21 @@ const noiseToTensor = (buffer, noiseLevel = 0.005) => {
 };
 
 const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
-  const lowpassFilter = audioCtx.createBiquadFilter();
+  const offlineCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  
+  const lowpassFilter = offlineCtx.createBiquadFilter();
   lowpassFilter.type = "lowpass";
-  lowpassFilter.frequency.setValueAtTime(lowpassFreq, audioCtx.currentTime);
+  lowpassFilter.frequency.setValueAtTime(lowpassFreq, offlineCtx.currentTime);
 
-  const highpassFilter = audioCtx.createBiquadFilter();
+  const highpassFilter = offlineCtx.createBiquadFilter();
   highpassFilter.type = "highpass";
-  highpassFilter.frequency.setValueAtTime(highpassFreq, audioCtx.currentTime);
+  highpassFilter.frequency.setValueAtTime(highpassFreq, offlineCtx.currentTime);
 
-  const source = audioCtx.createBufferSource();
+  const source = offlineCtx.createBufferSource();
   source.buffer = buffer;
 
   source.connect(highpassFilter);
   highpassFilter.connect(lowpassFilter);
-
-  const offlineCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
   lowpassFilter.connect(offlineCtx.destination);
 
   return new Promise((resolve) => {
@@ -235,6 +235,7 @@ const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
     });
   });
 };
+
 
 
 const processAudio = async () => {
