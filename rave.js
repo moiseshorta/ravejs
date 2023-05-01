@@ -210,7 +210,7 @@ const noiseToTensor = (buffer, noiseLevel = 0.005) => {
   return noisyTensor;
 };
 
-const applyFilters = (buffer, highpass, lowpass) => {
+const applyFilters = async (buffer, highpass, lowpass) => {
   // Create a new AudioBufferSourceNode for the input buffer
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
@@ -225,14 +225,32 @@ const applyFilters = (buffer, highpass, lowpass) => {
   lowpassFilter.type = "lowpass";
   lowpassFilter.frequency.value = lowpass;
 
-  // Connect the nodes: source -> highpassFilter -> lowpassFilter -> audioCtx.destination
+  // Create a processor node to capture the output of the filter chain
+  const processor = audioCtx.createScriptProcessor(buffer.length, buffer.numberOfChannels, buffer.numberOfChannels);
+  const outputPromise = new Promise(resolve => {
+    processor.onaudioprocess = function(e) {
+      // Get the output buffer
+      const outputBuffer = e.outputBuffer;
+      // Disconnect processor to allow garbage collection
+      processor.disconnect();
+      // Resolve the promise with the output buffer
+      resolve(outputBuffer);
+    };
+  });
+
+  // Connect the nodes: source -> highpassFilter -> lowpassFilter -> processor
   source.connect(highpassFilter);
   highpassFilter.connect(lowpassFilter);
-  lowpassFilter.connect(audioCtx.destination);
+  lowpassFilter.connect(processor);
+  processor.connect(audioCtx.destination);
 
-  return lowpassFilter;
+  // Start the source node
+  source.start();
+
+  // Wait for the output buffer and return it
+  const outputBuffer = await outputPromise;
+  return outputBuffer;
 };
-
 
 
 const processAudio = async () => {
@@ -240,11 +258,12 @@ const processAudio = async () => {
 
   const lowpassFreq = parseFloat(document.getElementById("lowpass").value);
   const highpassFreq = parseFloat(document.getElementById("highpass").value);
-  
+
   const monoBuffer = audioCtx.createBuffer(1, inputBuffer.length, inputBuffer.sampleRate);
   monoBuffer.copyToChannel(inputBuffer.getChannelData(0), 0);
-  
-  const filteredBuffer = await applyFilters(monoBuffer, lowpassFreq, highpassFreq);
+
+  const filteredBuffer = await applyFilters(monoBuffer, highpassFreq, lowpassFreq);
   outputBuffer = await raveForward(filteredBuffer);
   make_download(outputBuffer, outputBuffer.getChannelData(0).length);
 };
+
