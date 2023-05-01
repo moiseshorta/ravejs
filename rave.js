@@ -209,3 +209,45 @@ const noiseToTensor = (buffer, noiseLevel = 0.005) => {
   const noisyTensor = new ort.Tensor("float32", noisyData, [1, 1, noisyData.length]);
   return noisyTensor;
 };
+
+const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
+  const lowpassFilter = audioCtx.createBiquadFilter();
+  lowpassFilter.type = "lowpass";
+  lowpassFilter.frequency.setValueAtTime(lowpassFreq, audioCtx.currentTime);
+
+  const highpassFilter = audioCtx.createBiquadFilter();
+  highpassFilter.type = "highpass";
+  highpassFilter.frequency.setValueAtTime(highpassFreq, audioCtx.currentTime);
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+
+  source.connect(highpassFilter);
+  highpassFilter.connect(lowpassFilter);
+
+  const outputBuffer = audioCtx.createBuffer(1, buffer.length, buffer.sampleRate);
+  const output = audioCtx.createBufferSource();
+  output.buffer = outputBuffer;
+
+  lowpassFilter.connect(outputBuffer, 0, 0);
+
+  return new Promise((resolve) => {
+    source.start();
+    output.start();
+    source.onended = () => resolve(outputBuffer);
+  });
+};
+
+const processAudio = async () => {
+  if (inputBuffer === null) return;
+
+  const lowpassFreq = parseFloat(document.getElementById("lowpass").value);
+  const highpassFreq = parseFloat(document.getElementById("highpass").value);
+  
+  const monoBuffer = audioCtx.createBuffer(1, inputBuffer.length, inputBuffer.sampleRate);
+  monoBuffer.copyToChannel(inputBuffer.getChannelData(0), 0);
+  
+  const filteredBuffer = await applyFilters(monoBuffer, lowpassFreq, highpassFreq);
+  outputBuffer = await raveForward(filteredBuffer);
+  make_download(outputBuffer, outputBuffer.getChannelData(0).length);
+};
