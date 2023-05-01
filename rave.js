@@ -210,30 +210,27 @@ const noiseToTensor = (buffer, noiseLevel = 0.005) => {
   return noisyTensor;
 };
 
-const applyFilters = async (buffer, lowpassFreq, highpassFreq) => {
-  const offlineCtx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-  
-  const lowpassFilter = offlineCtx.createBiquadFilter();
-  lowpassFilter.type = "lowpass";
-  lowpassFilter.frequency.setValueAtTime(lowpassFreq, offlineCtx.currentTime);
-
-  const highpassFilter = offlineCtx.createBiquadFilter();
-  highpassFilter.type = "highpass";
-  highpassFilter.frequency.setValueAtTime(highpassFreq, offlineCtx.currentTime);
-
-  const source = offlineCtx.createBufferSource();
+const applyFilters = (buffer, highpass, lowpass) => {
+  // Create a new AudioBufferSourceNode for the input buffer
+  const source = audioCtx.createBufferSource();
   source.buffer = buffer;
 
+  // Create a highpass filter
+  const highpassFilter = audioCtx.createBiquadFilter();
+  highpassFilter.type = "highpass";
+  highpassFilter.frequency.value = highpass;
+
+  // Create a lowpass filter
+  const lowpassFilter = audioCtx.createBiquadFilter();
+  lowpassFilter.type = "lowpass";
+  lowpassFilter.frequency.value = lowpass;
+
+  // Connect the nodes: source -> highpassFilter -> lowpassFilter -> audioCtx.destination
   source.connect(highpassFilter);
   highpassFilter.connect(lowpassFilter);
-  lowpassFilter.connect(offlineCtx.destination);
+  lowpassFilter.connect(audioCtx.destination);
 
-  return new Promise((resolve) => {
-    source.start(0);
-    offlineCtx.startRendering().then((renderedBuffer) => {
-      resolve(renderedBuffer);
-    });
-  });
+  return lowpassFilter;
 };
 
 
