@@ -141,7 +141,7 @@ channel[i] = isNaN(tensor.data[i]) ? 0 : tensor.data[i];
 }
 return buffer;
 };
-
+/*
 const raveForward = async (buffer) => {
 let model_name = document.getElementById("model");
 let playButton = document.getElementById("play_output");
@@ -156,4 +156,56 @@ audio_out = tensorToBuffer(audio_out);
 playButton.disabled = false;
 ravifyButton.disabled = false;
 return audio_out;
+};
+*/
+
+// NEW FUNCTION: tensorToStereoBuffer
+const tensorToStereoBuffer = (leftTensor, rightTensor) => {
+  let len = leftTensor.dims[2];
+  let buffer = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+  let leftChannel = buffer.getChannelData(0);
+  let rightChannel = buffer.getChannelData(1);
+
+  for (let i = 0; i < buffer.length; i++) {
+    leftChannel[i] = isNaN(leftTensor.data[i]) ? 0 : leftTensor.data[i];
+    rightChannel[i] = isNaN(rightTensor.data[i]) ? 0 : rightTensor.data[i];
+  }
+
+  return buffer;
+};
+
+const raveForward = async (buffer) => {
+  let model_name = document.getElementById("model");
+  let playButton = document.getElementById("play_output");
+  let ravifyButton = document.getElementById("ravify_button");
+  ravifyButton.disabled = true;
+  playButton.disabled = true;
+  let inputTensor = bufferToTensor(buffer);
+  let noisyInputTensor = noiseToTensor(buffer);
+
+  let session = await ort.InferenceSession.create(model_name.value);
+  let feeds = { audio_in: inputTensor };
+  let audio_out = (await session.run(feeds)).audio_out;
+
+  feeds = { audio_in: noisyInputTensor };
+  let noisy_audio_out = (await session.run(feeds)).audio_out;
+
+  audio_out = tensorToStereoBuffer(audio_out, noisy_audio_out);
+
+  playButton.disabled = false;
+  ravifyButton.disabled = false;
+  return audio_out;
+};
+
+// NEW FUNCTION: noiseToTensor
+const noiseToTensor = (buffer, noiseLevel = 0.01) => {
+  const source = buffer.getChannelData(0);
+  const noisyData = new Float32Array(source.length);
+
+  for (let i = 0; i < source.length; i++) {
+    noisyData[i] = source[i] + (Math.random() * 2 - 1) * noiseLevel;
+  }
+
+  const noisyTensor = new ort.Tensor("float32", noisyData, [1, 1, noisyData.length]);
+  return noisyTensor;
 };
