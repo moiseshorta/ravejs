@@ -198,7 +198,7 @@ const raveForward = async (buffer) => {
 };
 
 // NEW FUNCTION: noiseToTensor
-const noiseToTensor = (buffer, noiseLevel = 0.005) => {
+const noiseToTensor = (buffer, noiseLevel = 0.001) => {
   const source = buffer.getChannelData(0);
   const noisyData = new Float32Array(source.length);
 
